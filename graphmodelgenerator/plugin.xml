@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+ <extension
+   point="org.eclipse.ui.handlers">
+  <handler
+      class="graphmodelgenerator.ui.GeneratorHelperProblem"
+      commandId="graphmodelgenerator.ui.problem">
+  </handler>
+  <handler
+      class="graphmodelgenerator.ui.GeneratorHelperViatra"
+      commandId="graphmodelgenerator.ui.viatra">
+  </handler>
+  <handler
+      class="graphmodelgenerator.ui.GeneratorHelperAlloy"
+      commandId="graphmodelgenerator.ui.alloy">
+  </handler>
+ </extension> 
+ <extension
+       point="org.eclipse.ui.commands">
+    <command
+          id="graphmodelgenerator.ui.problem"
+          name="GenerateProblem">
+    </command>
+    <command
+          id="graphmodelgenerator.ui.viatra"
+          name="GenerateViatra">
+    </command>
+    <command
+          id="graphmodelgenerator.ui.alloy"
+          name="GenerateAlloy">
+    </command>
+ </extension>
+ <extension
+       point="org.eclipse.ui.menus">
+    <menuContribution
+          allPopups="false"
+          locationURI="popup:graphmodelgenerator.ui.menu">
+       <command
+             commandId="graphmodelgenerator.ui.problem"
+             label="Generate Problem"
+             style="push">
+       </command>
+    </menuContribution>
+    <menuContribution
+          allPopups="false"
+          locationURI="popup:graphmodelgenerator.ui.menu">
+       <command
+             commandId="graphmodelgenerator.ui.viatra"
+             label="Generate Viatra"
+             style="push">
+       </command>
+    </menuContribution>
+    <menuContribution
+          allPopups="false"
+          locationURI="popup:graphmodelgenerator.ui.menu">
+       <command
+             commandId="graphmodelgenerator.ui.alloy"
+             label="Generate Alloy"
+             style="push">
+       </command>
+    </menuContribution>
+    <menuContribution
+          allPopups="false"
+          locationURI="popup:org.eclipse.ui.popup.any?after=additions">
+       <menu
+             id="graphmodelgenerator.ui.menu"
+             label="Generate Graphmodel">
+       </menu>
+    </menuContribution>
+ </extension>
+</plugin>
