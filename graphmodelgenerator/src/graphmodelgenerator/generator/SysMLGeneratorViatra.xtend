@@ -209,6 +209,13 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		@Constraint
 		pattern invalidActionSeq(a1: Action, a2: Action) {
 		«invalidActionSeq(startActionDefName(ad))»
+		
+		@Constraint
+		pattern multiplePrev(a: Action) :-
+			Action.next(a, a1);
+			Action.next(a, a2);
+			a1 != a2;
+		}
 	'''
 	
 	def String invalidSuccession(Iterable<SuccessionAsUsage> successions, boolean onlyBlock) '''
@@ -248,16 +255,19 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 	'''
 	
 	def String invalidNumOfNext(ActionDefinition ad, Iterable<TransitionUsage> transitions) '''
-		«FOR entry : transitionMap(transitions, false).entrySet»
-			«IF entry.getValue.size > 1 && leadsToEndAction(ad, sourceUsage(ad, entry.getKey), new ArrayList<Usage>())»
+		«val actionTargetMap = transitionMap(transitions, false)»«
+		FOR entry : actionTargetMap.entrySet»
+			«IF entry.getValue.size > 1 && leadsToEndAction(ad, outEdges(ad, entry.getKey).get(0), new ArrayList<Usage>())»
 				«"	"»«actionDefName(entry.getKey)»(a);
 				«"	"»1 =!= find nextAction(a, _a);
 				«lineEnd(transitionMap(transitions, false), entry.getKey, transitionMap(transitions, true).isEmpty)»
 			«ENDIF»
 		«ENDFOR»
 		«FOR entry : transitionMap(transitions, true).entrySet»
-			«"	"»«actionDefName(entry.getKey)»(a);
-			«"	"»0 =!= find nextAction(a, _a);
+			«IF !actionTargetMap.containsKey(entry.getKey)»
+				«"	"»«actionDefName(entry.getKey)»(a);
+				«"	"»0 =!= find nextAction(a, _a);
+			«ENDIF»
 			«lineEnd(transitionMap(transitions, true), entry.getKey, true)»
 		«ENDFOR»
 		
@@ -400,14 +410,15 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		return false;
 	}
 	
-	def Usage sourceUsage(ActionDefinition ad, Usage u) {
+	def List<Usage> outEdges(ActionDefinition ad, Usage u) {
+		val List<Usage> sources = new ArrayList();
 		for (succ : ad.member.filter(SuccessionAsUsage))
 			if (succ.source.get(0).equals(u))
-				return succ;
+				sources.add(succ);
 		for (trans : ad.member.filter(TransitionUsage))
 			if (trans.source.equals(u))
-				return trans;
-		return null;
+				sources.add(trans);
+		return sources;
 	}
 	
 	def boolean leadsToEndAction(ActionDefinition ad, Usage u, List<Usage> seen) {
@@ -420,7 +431,10 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 			}			
 			else {
 				seen.add(u);
-				return leadsToEndAction(ad, sourceUsage(ad, u.target.get(0) as Usage), seen);
+				for (e : outEdges(ad, u.target.get(0) as Usage))
+					if (leadsToEndAction(ad, e, seen))
+				 		return true;
+				return false;
 			}
 		}
 		else if (u instanceof TransitionUsage) {
@@ -432,7 +446,10 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 			}			
 			else {
 				seen.add(u);
-				return leadsToEndAction(ad,  sourceUsage(ad, u.target as Usage), seen);
+				for (e : outEdges(ad, u.target as Usage))
+					if (leadsToEndAction(ad, e, seen))
+				 		return true;
+				return false;
 			}
 		}
 		return false;

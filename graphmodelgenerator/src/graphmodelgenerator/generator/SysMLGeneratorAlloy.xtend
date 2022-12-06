@@ -232,6 +232,10 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 		fact actionSeq {
 			«actionSeq(startActionDefName(ad))»
 		}
+		
+		fact lonePrev {
+			all a: Action | (lone a_: Action | a in a_.next)
+		}
 	'''
 	
 	def String correctSuccession(Iterable<SuccessionAsUsage> successions, Iterable<TransitionUsage> transitions) '''
@@ -256,13 +260,16 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 				all a: «actionDefName(succ.source.get(0) as ActionUsage)» | (no a_: Action | a_ in a.next)
 			«ENDIF»
 		«ENDFOR»
-		«FOR entry : transitionMap(transitions, false).entrySet»
-			«IF entry.getValue.size > 1 && leadsToEndAction(ad, sourceUsage(ad, entry.getKey), new ArrayList<Usage>())»
+		«val actionTargetMap = transitionMap(transitions, false)»«
+		FOR entry : actionTargetMap.entrySet»
+			«IF entry.getValue.size > 1 && leadsToEndAction(ad, outEdges(ad, entry.getKey).get(0), new ArrayList<Usage>())»
 				all a: «actionDefName(entry.getKey)» | (one a_: Action | a_ in a.next)
 			«ENDIF»
 		«ENDFOR»
 		«FOR entry : transitionMap(transitions, true).entrySet»
-			all a: «actionDefName(entry.getKey)» | (no a_: Action | a_ in a.next)
+			«IF !actionTargetMap.containsKey(entry.getKey)»
+				all a: «actionDefName(entry.getKey)» | (no a_: Action | a_ in a.next)
+			«ENDIF»
 		«ENDFOR»
 	'''
 	
@@ -370,14 +377,15 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 		return false;
 	}
 	
-	def Usage sourceUsage(ActionDefinition ad, Usage u) {
+	def List<Usage> outEdges(ActionDefinition ad, Usage u) {
+		val List<Usage> sources = new ArrayList();
 		for (succ : ad.member.filter(SuccessionAsUsage))
 			if (succ.source.get(0).equals(u))
-				return succ;
+				sources.add(succ);
 		for (trans : ad.member.filter(TransitionUsage))
 			if (trans.source.equals(u))
-				return trans;
-		return null;
+				sources.add(trans);
+		return sources;
 	}
 	
 	def boolean leadsToEndAction(ActionDefinition ad, Usage u, List<Usage> seen) {
@@ -390,7 +398,10 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 			}			
 			else {
 				seen.add(u);
-				return leadsToEndAction(ad, sourceUsage(ad, u.target.get(0) as Usage), seen);
+				for (e : outEdges(ad, u.target.get(0) as Usage))
+					if (leadsToEndAction(ad, e, seen))
+				 		return true;
+				return false;
 			}
 		}
 		else if (u instanceof TransitionUsage) {
@@ -402,7 +413,10 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 			}			
 			else {
 				seen.add(u);
-				return leadsToEndAction(ad,  sourceUsage(ad, u.target as Usage), seen);
+				for (e : outEdges(ad, u.target as Usage))
+					if (leadsToEndAction(ad, e, seen))
+				 		return true;
+				return false;
 			}
 		}
 		return false;

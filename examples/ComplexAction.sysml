@@ -3,6 +3,7 @@ import ScalarValues::Boolean;
 action def Complex_Action {
   in condition_1: Boolean;
   in condition_2: Boolean;
+  in condition_3: Boolean;
   first start;
   then merge m1;
   then action a1: Action_1;
@@ -14,7 +15,10 @@ action def Complex_Action {
   decide d2;
   	if condition_2 then m2;
    	else a4;
-  first a3 then m3;
+  first a3 then d3;
+  decide d3;
+  	if condition_3 then m3;
+    else done;
   first a4 then m3;
   merge m3;
   then m1;

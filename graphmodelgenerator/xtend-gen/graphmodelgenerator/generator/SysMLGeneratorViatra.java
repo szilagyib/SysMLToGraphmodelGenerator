@@ -468,6 +468,22 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     String _invalidActionSeq = this.invalidActionSeq(this.startActionDefName(ad));
     _builder.append(_invalidActionSeq);
     _builder.newLineIfNotEmpty();
+    _builder.newLine();
+    _builder.append("@Constraint");
+    _builder.newLine();
+    _builder.append("pattern multiplePrev(a: Action) :-");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("Action.next(a, a1);");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("Action.next(a, a2);");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("a1 != a2;");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
     return _builder.toString();
   }
   
@@ -578,11 +594,13 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
   
   public String invalidNumOfNext(final ActionDefinition ad, final Iterable<TransitionUsage> transitions) {
     StringConcatenation _builder = new StringConcatenation();
+    final Map<ActionUsage, List<String>> actionTargetMap = this.transitionMap(transitions, false);
     {
-      Set<Map.Entry<ActionUsage, List<String>>> _entrySet = this.transitionMap(transitions, false).entrySet();
+      Set<Map.Entry<ActionUsage, List<String>>> _entrySet = actionTargetMap.entrySet();
       for(final Map.Entry<ActionUsage, List<String>> entry : _entrySet) {
+        _builder.newLineIfNotEmpty();
         {
-          if (((entry.getValue().size() > 1) && this.leadsToEndAction(ad, this.sourceUsage(ad, entry.getKey()), new ArrayList<Usage>()))) {
+          if (((entry.getValue().size() > 1) && this.leadsToEndAction(ad, this.outEdges(ad, entry.getKey()).get(0), new ArrayList<Usage>()))) {
             _builder.append("\t");
             String _actionDefName = this.actionDefName(entry.getKey());
             _builder.append(_actionDefName);
@@ -601,14 +619,20 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     {
       Set<Map.Entry<ActionUsage, List<String>>> _entrySet_1 = this.transitionMap(transitions, true).entrySet();
       for(final Map.Entry<ActionUsage, List<String>> entry_1 : _entrySet_1) {
-        _builder.append("\t");
-        String _actionDefName_1 = this.actionDefName(entry_1.getKey());
-        _builder.append(_actionDefName_1);
-        _builder.append("(a);");
-        _builder.newLineIfNotEmpty();
-        _builder.append("\t");
-        _builder.append("0 =!= find nextAction(a, _a);");
-        _builder.newLineIfNotEmpty();
+        {
+          boolean _containsKey = actionTargetMap.containsKey(entry_1.getKey());
+          boolean _not = (!_containsKey);
+          if (_not) {
+            _builder.append("\t");
+            String _actionDefName_1 = this.actionDefName(entry_1.getKey());
+            _builder.append(_actionDefName_1);
+            _builder.append("(a);");
+            _builder.newLineIfNotEmpty();
+            _builder.append("\t");
+            _builder.append("0 =!= find nextAction(a, _a);");
+            _builder.newLineIfNotEmpty();
+          }
+        }
         String _lineEnd_1 = this.lineEnd(this.transitionMap(transitions, true), entry_1.getKey(), true);
         _builder.append(_lineEnd_1);
         _builder.newLineIfNotEmpty();
@@ -851,22 +875,23 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     return false;
   }
   
-  public Usage sourceUsage(final ActionDefinition ad, final Usage u) {
+  public List<Usage> outEdges(final ActionDefinition ad, final Usage u) {
+    final List<Usage> sources = new ArrayList<Usage>();
     Iterable<SuccessionAsUsage> _filter = Iterables.<SuccessionAsUsage>filter(ad.getMember(), SuccessionAsUsage.class);
     for (final SuccessionAsUsage succ : _filter) {
       boolean _equals = succ.getSource().get(0).equals(u);
       if (_equals) {
-        return succ;
+        sources.add(succ);
       }
     }
     Iterable<TransitionUsage> _filter_1 = Iterables.<TransitionUsage>filter(ad.getMember(), TransitionUsage.class);
     for (final TransitionUsage trans : _filter_1) {
       boolean _equals_1 = trans.getSource().equals(u);
       if (_equals_1) {
-        return trans;
+        sources.add(trans);
       }
     }
-    return null;
+    return sources;
   }
   
   public boolean leadsToEndAction(final ActionDefinition ad, final Usage u, final List<Usage> seen) {
@@ -881,7 +906,14 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
         } else {
           seen.add(u);
           Element _get = ((SuccessionAsUsage)u).getTarget().get(0);
-          return this.leadsToEndAction(ad, this.sourceUsage(ad, ((Usage) _get)), seen);
+          List<Usage> _outEdges = this.outEdges(ad, ((Usage) _get));
+          for (final Usage e : _outEdges) {
+            boolean _leadsToEndAction = this.leadsToEndAction(ad, e, seen);
+            if (_leadsToEndAction) {
+              return true;
+            }
+          }
+          return false;
         }
       }
     } else {
@@ -896,7 +928,14 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
           } else {
             seen.add(u);
             ActionUsage _target = ((TransitionUsage)u).getTarget();
-            return this.leadsToEndAction(ad, this.sourceUsage(ad, ((Usage) _target)), seen);
+            List<Usage> _outEdges_1 = this.outEdges(ad, ((Usage) _target));
+            for (final Usage e_1 : _outEdges_1) {
+              boolean _leadsToEndAction_1 = this.leadsToEndAction(ad, e_1, seen);
+              if (_leadsToEndAction_1) {
+                return true;
+              }
+            }
+            return false;
           }
         }
       }
