@@ -58,7 +58,7 @@ class SysMLGeneratorProblem extends AbstractGenerator {
 		«ENDFOR»
 		«IF !model.member.filter(ActionDefinition).isEmpty»
 			
-			scope domain = «numOfNodes(model.member.filter(ActionDefinition))».
+			scope domain <= «numOfNodes(model.member.filter(ActionDefinition))».
 		«ENDIF»	
 	'''
 
@@ -179,8 +179,8 @@ class SysMLGeneratorProblem extends AbstractGenerator {
 			
 		«IF hasEndAction(ad)»
 			error invalidNumOfNext(Action a) :-
-				«invalidNumOfNext(ad, ad.member.filter(SuccessionAsUsage), transitionMap(ad.member.filter(TransitionUsage), true).isEmpty
-					&& transitionMap(ad.member.filter(TransitionUsage), false).isEmpty)»
+				«invalidNumOfNext(ad, ad.member.filter(SuccessionAsUsage), oneTargetActionMap(ad, ad.member.filter(TransitionUsage)).isEmpty
+					&& justEndTargetMap(ad.member.filter(TransitionUsage)).isEmpty)»
 				«invalidNumOfNext(ad, ad.member.filter(TransitionUsage))»
 			
 		«ENDIF»		
@@ -226,18 +226,15 @@ class SysMLGeneratorProblem extends AbstractGenerator {
 	'''
 	
 	def String invalidNumOfNext(ActionDefinition ad, Iterable<TransitionUsage> transitions) '''
-		«val actionTargetMap = transitionMap(transitions, false)»«
+		«val actionTargetMap = oneTargetActionMap(ad, transitions)»«
+		val endTargetMap = justEndTargetMap(transitions)»«
 		FOR entry : actionTargetMap.entrySet»
-			«IF entry.getValue.size > 1 && leadsToEndAction(ad, outEdges(ad, entry.getKey).get(0), new ArrayList<Usage>())»
-				«actionDefName(entry.getKey)»(a),
-				1 =!= count { next(a, _a) }«lineEnd(transitionMap(transitions, false), entry.getKey, transitionMap(transitions, true).isEmpty)»
-			«ENDIF»
+			«actionDefName(entry.getKey)»(a),
+			1 =!= count { next(a, _a) }«lineEnd(actionTargetMap, entry.getKey, endTargetMap.isEmpty)»
 		«ENDFOR»
-		«FOR entry : transitionMap(transitions, true).entrySet»
-			«IF !actionTargetMap.containsKey(entry.getKey)»
-				«actionDefName(entry.getKey)»(a),
-				0 =!= count { next(a, _a) }«lineEnd(transitionMap(transitions, true), entry.getKey, true)»
-			«ENDIF»
+		«FOR entry : endTargetMap.entrySet»
+			«actionDefName(entry.getKey)»(a),
+			0 =!= count { next(a, _a) }«lineEnd(endTargetMap, entry.getKey, true)»
 		«ENDFOR»
 	'''
 	
@@ -294,7 +291,7 @@ class SysMLGeneratorProblem extends AbstractGenerator {
 		«"	"»!«entryAction»(a).
 		
 		pred isEntry(Action a) :-
-			0 =:= count {notInTransitiveClosure(a, _a)}.
+			0 =:= count { notInTransitiveClosure(a, _a) }.
 		
 		pred notInTransitiveClosure(Action a1, Action a2) :-
 			a1 != a2,
@@ -317,6 +314,17 @@ class SysMLGeneratorProblem extends AbstractGenerator {
 			}		
 		}
 		return map;
+	}
+	
+	def Map<ActionUsage, List<String>> justEndTargetMap(Iterable<TransitionUsage> transitions) {
+		val actionTargetMap = transitionMap(transitions, false);
+		val endTargetMap = transitionMap(transitions, true);
+		return endTargetMap.filter[k, v | !actionTargetMap.containsKey(k)];
+	}
+	
+	def Map<ActionUsage, List<String>> oneTargetActionMap(ActionDefinition ad, Iterable<TransitionUsage> transitions) {
+		val actionTargetMap = transitionMap(transitions, false);
+		return actionTargetMap.filter[k, v | v.size > 1 && leadsToEndAction(ad, outEdges(ad, k).get(0), new ArrayList<Usage>())];
 	}
 	
 	def ActionUsage lastKeyInTransitionMap(Map<ActionUsage, List<String>> map) {

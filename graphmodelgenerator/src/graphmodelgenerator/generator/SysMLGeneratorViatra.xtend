@@ -77,7 +77,7 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		  metamodel = {package action}
 		  constraints = {package queries}
 		  solver = ViatraSolver
-		  scope = {#node = «numOfNodes(model.member.filter(ActionDefinition))»}
+		  scope = {#node = 0..«numOfNodes(model.member.filter(ActionDefinition))»}
 		  config = {log-level = normal, "scopePropagator" = "typeHierarchy"}
 		  number = 1
 		  //should be replaced by actual project name!
@@ -201,8 +201,8 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		«IF hasEndAction(ad)»
 			@Constraint
 			pattern invalidNumOfNext(a: Action) {
-			«invalidNumOfNext(ad, ad.member.filter(SuccessionAsUsage), transitionMap(ad.member.filter(TransitionUsage), true).isEmpty
-				&& transitionMap(ad.member.filter(TransitionUsage), false).isEmpty)»
+			«invalidNumOfNext(ad, ad.member.filter(SuccessionAsUsage), oneTargetActionMap(ad, ad.member.filter(TransitionUsage)).isEmpty
+				&& justEndTargetMap(ad.member.filter(TransitionUsage)).isEmpty)»
 			«invalidNumOfNext(ad, ad.member.filter(TransitionUsage))»
 			
 		«ENDIF»
@@ -255,20 +255,17 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 	'''
 	
 	def String invalidNumOfNext(ActionDefinition ad, Iterable<TransitionUsage> transitions) '''
-		«val actionTargetMap = transitionMap(transitions, false)»«
+		«val actionTargetMap = oneTargetActionMap(ad, transitions)»«
+		val endTargetMap = justEndTargetMap(transitions)»«
 		FOR entry : actionTargetMap.entrySet»
-			«IF entry.getValue.size > 1 && leadsToEndAction(ad, outEdges(ad, entry.getKey).get(0), new ArrayList<Usage>())»
-				«"	"»«actionDefName(entry.getKey)»(a);
-				«"	"»1 =!= find nextAction(a, _a);
-				«lineEnd(transitionMap(transitions, false), entry.getKey, transitionMap(transitions, true).isEmpty)»
-			«ENDIF»
+			«"	"»«actionDefName(entry.getKey)»(a);
+			«"	"»1 =!= find nextAction(a, _a);
+			«lineEnd(actionTargetMap, entry.getKey, endTargetMap.isEmpty)»
 		«ENDFOR»
-		«FOR entry : transitionMap(transitions, true).entrySet»
-			«IF !actionTargetMap.containsKey(entry.getKey)»
-				«"	"»«actionDefName(entry.getKey)»(a);
-				«"	"»0 =!= find nextAction(a, _a);
-			«ENDIF»
-			«lineEnd(transitionMap(transitions, true), entry.getKey, true)»
+		«FOR entry : endTargetMap.entrySet»
+			«"	"»«actionDefName(entry.getKey)»(a);
+			«"	"»0 =!= find nextAction(a, _a);
+			«lineEnd(endTargetMap, entry.getKey, true)»
 		«ENDFOR»
 		
 		pattern nextAction(first: Action, second: Action) {
@@ -367,6 +364,17 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 			}		
 		}
 		return map;
+	}
+	
+	def Map<ActionUsage, List<String>> justEndTargetMap(Iterable<TransitionUsage> transitions) {
+		val actionTargetMap = transitionMap(transitions, false);
+		val endTargetMap = transitionMap(transitions, true);
+		return endTargetMap.filter[k, v | !actionTargetMap.containsKey(k)];
+	}
+	
+	def Map<ActionUsage, List<String>> oneTargetActionMap(ActionDefinition ad, Iterable<TransitionUsage> transitions) {
+		val actionTargetMap = transitionMap(transitions, false);
+		return actionTargetMap.filter[k, v | v.size > 1 && leadsToEndAction(ad, outEdges(ad, k).get(0), new ArrayList<Usage>())];
 	}
 	
 	def ActionUsage lastKeyInTransitionMap(Map<ActionUsage, List<String>> map) {

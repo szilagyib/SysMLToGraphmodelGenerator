@@ -20,7 +20,9 @@ import org.eclipse.xtext.generator.IGeneratorContext;
 import org.eclipse.xtext.xbase.lib.Conversions;
 import org.eclipse.xtext.xbase.lib.ExclusiveRange;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
+import org.eclipse.xtext.xbase.lib.Functions.Function2;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
+import org.eclipse.xtext.xbase.lib.MapExtensions;
 import org.omg.sysml.lang.sysml.ActionDefinition;
 import org.omg.sysml.lang.sysml.ActionUsage;
 import org.omg.sysml.lang.sysml.AttributeDefinition;
@@ -101,7 +103,7 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
       boolean _not_1 = (!_isEmpty_1);
       if (_not_1) {
         _builder.newLine();
-        _builder.append("scope domain = ");
+        _builder.append("scope domain <= ");
         int _numOfNodes = this.numOfNodes(Iterables.<ActionDefinition>filter(model.getMember(), ActionDefinition.class));
         _builder.append(_numOfNodes);
         _builder.append(".");
@@ -415,7 +417,7 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
         _builder.newLine();
         _builder.append("\t");
         Iterable<SuccessionAsUsage> _filter = Iterables.<SuccessionAsUsage>filter(ad.getMember(), SuccessionAsUsage.class);
-        String _invalidNumOfNext = this.invalidNumOfNext(ad, _filter, (this.transitionMap(Iterables.<TransitionUsage>filter(ad.getMember(), TransitionUsage.class), true).isEmpty() && this.transitionMap(Iterables.<TransitionUsage>filter(ad.getMember(), TransitionUsage.class), false).isEmpty()));
+        String _invalidNumOfNext = this.invalidNumOfNext(ad, _filter, (this.oneTargetActionMap(ad, Iterables.<TransitionUsage>filter(ad.getMember(), TransitionUsage.class)).isEmpty() && this.justEndTargetMap(Iterables.<TransitionUsage>filter(ad.getMember(), TransitionUsage.class)).isEmpty()));
         _builder.append(_invalidNumOfNext, "\t");
         _builder.newLineIfNotEmpty();
         _builder.append("\t");
@@ -538,42 +540,33 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
   
   public String invalidNumOfNext(final ActionDefinition ad, final Iterable<TransitionUsage> transitions) {
     StringConcatenation _builder = new StringConcatenation();
-    final Map<ActionUsage, List<String>> actionTargetMap = this.transitionMap(transitions, false);
+    final Map<ActionUsage, List<String>> actionTargetMap = this.oneTargetActionMap(ad, transitions);
+    final Map<ActionUsage, List<String>> endTargetMap = this.justEndTargetMap(transitions);
     {
       Set<Map.Entry<ActionUsage, List<String>>> _entrySet = actionTargetMap.entrySet();
       for(final Map.Entry<ActionUsage, List<String>> entry : _entrySet) {
         _builder.newLineIfNotEmpty();
-        {
-          if (((entry.getValue().size() > 1) && this.leadsToEndAction(ad, this.outEdges(ad, entry.getKey()).get(0), new ArrayList<Usage>()))) {
-            String _actionDefName = this.actionDefName(entry.getKey());
-            _builder.append(_actionDefName);
-            _builder.append("(a),");
-            _builder.newLineIfNotEmpty();
-            _builder.append("1 =!= count { next(a, _a) }");
-            String _lineEnd = this.lineEnd(this.transitionMap(transitions, false), entry.getKey(), this.transitionMap(transitions, true).isEmpty());
-            _builder.append(_lineEnd);
-            _builder.newLineIfNotEmpty();
-          }
-        }
+        String _actionDefName = this.actionDefName(entry.getKey());
+        _builder.append(_actionDefName);
+        _builder.append("(a),");
+        _builder.newLineIfNotEmpty();
+        _builder.append("1 =!= count { next(a, _a) }");
+        String _lineEnd = this.lineEnd(actionTargetMap, entry.getKey(), endTargetMap.isEmpty());
+        _builder.append(_lineEnd);
+        _builder.newLineIfNotEmpty();
       }
     }
     {
-      Set<Map.Entry<ActionUsage, List<String>>> _entrySet_1 = this.transitionMap(transitions, true).entrySet();
+      Set<Map.Entry<ActionUsage, List<String>>> _entrySet_1 = endTargetMap.entrySet();
       for(final Map.Entry<ActionUsage, List<String>> entry_1 : _entrySet_1) {
-        {
-          boolean _containsKey = actionTargetMap.containsKey(entry_1.getKey());
-          boolean _not = (!_containsKey);
-          if (_not) {
-            String _actionDefName_1 = this.actionDefName(entry_1.getKey());
-            _builder.append(_actionDefName_1);
-            _builder.append("(a),");
-            _builder.newLineIfNotEmpty();
-            _builder.append("0 =!= count { next(a, _a) }");
-            String _lineEnd_1 = this.lineEnd(this.transitionMap(transitions, true), entry_1.getKey(), true);
-            _builder.append(_lineEnd_1);
-            _builder.newLineIfNotEmpty();
-          }
-        }
+        String _actionDefName_1 = this.actionDefName(entry_1.getKey());
+        _builder.append(_actionDefName_1);
+        _builder.append("(a),");
+        _builder.newLineIfNotEmpty();
+        _builder.append("0 =!= count { next(a, _a) }");
+        String _lineEnd_1 = this.lineEnd(endTargetMap, entry_1.getKey(), true);
+        _builder.append(_lineEnd_1);
+        _builder.newLineIfNotEmpty();
       }
     }
     return _builder.toString();
@@ -702,7 +695,7 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
     _builder.append("pred isEntry(Action a) :-");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("0 =:= count {notInTransitiveClosure(a, _a)}.");
+    _builder.append("0 =:= count { notInTransitiveClosure(a, _a) }.");
     _builder.newLine();
     _builder.newLine();
     _builder.append("pred notInTransitiveClosure(Action a1, Action a2) :-");
@@ -737,6 +730,24 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
       }
     }
     return map;
+  }
+  
+  public Map<ActionUsage, List<String>> justEndTargetMap(final Iterable<TransitionUsage> transitions) {
+    final Map<ActionUsage, List<String>> actionTargetMap = this.transitionMap(transitions, false);
+    final Map<ActionUsage, List<String>> endTargetMap = this.transitionMap(transitions, true);
+    final Function2<ActionUsage, List<String>, Boolean> _function = (ActionUsage k, List<String> v) -> {
+      boolean _containsKey = actionTargetMap.containsKey(k);
+      return Boolean.valueOf((!_containsKey));
+    };
+    return MapExtensions.<ActionUsage, List<String>>filter(endTargetMap, _function);
+  }
+  
+  public Map<ActionUsage, List<String>> oneTargetActionMap(final ActionDefinition ad, final Iterable<TransitionUsage> transitions) {
+    final Map<ActionUsage, List<String>> actionTargetMap = this.transitionMap(transitions, false);
+    final Function2<ActionUsage, List<String>, Boolean> _function = (ActionUsage k, List<String> v) -> {
+      return Boolean.valueOf(((v.size() > 1) && this.leadsToEndAction(ad, this.outEdges(ad, k).get(0), new ArrayList<Usage>())));
+    };
+    return MapExtensions.<ActionUsage, List<String>>filter(actionTargetMap, _function);
   }
   
   public ActionUsage lastKeyInTransitionMap(final Map<ActionUsage, List<String>> map) {

@@ -247,7 +247,7 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 		«FOR entry : transitionMap(transitions, false).entrySet»
 			all a: «actionDefName(entry.getKey)» | a.next in «
 				FOR targetName : entry.getValue»«
-					targetName»«IF !targetName.equals(entry.getValue.last)» or a.next in «ENDIF»«
+					targetName»«IF !targetName.equals(entry.getValue.last)» + «ENDIF»«
 				ENDFOR»
 		«ENDFOR»
 	'''
@@ -260,16 +260,13 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 				all a: «actionDefName(succ.source.get(0) as ActionUsage)» | (no a_: Action | a_ in a.next)
 			«ENDIF»
 		«ENDFOR»
-		«val actionTargetMap = transitionMap(transitions, false)»«
+		«val actionTargetMap = oneTargetActionMap(ad, transitions)»«
+		val endTargetMap = justEndTargetMap(transitions)»«
 		FOR entry : actionTargetMap.entrySet»
-			«IF entry.getValue.size > 1 && leadsToEndAction(ad, outEdges(ad, entry.getKey).get(0), new ArrayList<Usage>())»
-				all a: «actionDefName(entry.getKey)» | (one a_: Action | a_ in a.next)
-			«ENDIF»
+			all a: «actionDefName(entry.getKey)» | (one a_: Action | a_ in a.next)
 		«ENDFOR»
-		«FOR entry : transitionMap(transitions, true).entrySet»
-			«IF !actionTargetMap.containsKey(entry.getKey)»
-				all a: «actionDefName(entry.getKey)» | (no a_: Action | a_ in a.next)
-			«ENDIF»
+		«FOR entry : endTargetMap.entrySet»
+			all a: «actionDefName(entry.getKey)» | (no a_: Action | a_ in a.next)
 		«ENDFOR»
 	'''
 	
@@ -334,6 +331,17 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 			}		
 		}
 		return map;
+	}
+	
+	def Map<ActionUsage, List<String>> justEndTargetMap(Iterable<TransitionUsage> transitions) {
+		val actionTargetMap = transitionMap(transitions, false);
+		val endTargetMap = transitionMap(transitions, true);
+		return endTargetMap.filter[k, v | !actionTargetMap.containsKey(k)];
+	}
+	
+	def Map<ActionUsage, List<String>> oneTargetActionMap(ActionDefinition ad, Iterable<TransitionUsage> transitions) {
+		val actionTargetMap = transitionMap(transitions, false);
+		return actionTargetMap.filter[k, v | v.size > 1 && leadsToEndAction(ad, outEdges(ad, k).get(0), new ArrayList<Usage>())];
 	}
 	
 	def ActionUsage lastKeyInTransitionMap(Map<ActionUsage, List<String>> map) {
