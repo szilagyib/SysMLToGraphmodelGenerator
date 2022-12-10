@@ -566,7 +566,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
             _builder.append("(a);");
             _builder.newLineIfNotEmpty();
             _builder.append("\t");
-            _builder.append("1 =!= find nextAction(a, _a);");
+            _builder.append("1 =!= count find nextAction(a, _a);");
             _builder.newLineIfNotEmpty();
             String _lineEnd = this.lineEnd(successions, succ, onlyBlock, false);
             _builder.append(_lineEnd);
@@ -581,7 +581,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
               _builder.append("(a);");
               _builder.newLineIfNotEmpty();
               _builder.append("\t");
-              _builder.append("0 =!= find nextAction(a, _a);");
+              _builder.append("0 =!= count find nextAction(a, _a);");
               _builder.newLineIfNotEmpty();
               String _lineEnd_1 = this.lineEnd(successions, succ, onlyBlock, false);
               _builder.append(_lineEnd_1);
@@ -608,7 +608,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
         _builder.append("(a);");
         _builder.newLineIfNotEmpty();
         _builder.append("\t");
-        _builder.append("1 =!= find nextAction(a, _a);");
+        _builder.append("1 =!= count find nextAction(a, _a);");
         _builder.newLineIfNotEmpty();
         String _lineEnd = this.lineEnd(actionTargetMap, entry.getKey(), endTargetMap.isEmpty());
         _builder.append(_lineEnd);
@@ -624,7 +624,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
         _builder.append("(a);");
         _builder.newLineIfNotEmpty();
         _builder.append("\t");
-        _builder.append("0 =!= find nextAction(a, _a);");
+        _builder.append("0 =!= count find nextAction(a, _a);");
         _builder.newLineIfNotEmpty();
         String _lineEnd_1 = this.lineEnd(endTargetMap, entry_1.getKey(), true);
         _builder.append(_lineEnd_1);

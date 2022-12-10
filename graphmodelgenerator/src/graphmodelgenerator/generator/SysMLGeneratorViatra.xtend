@@ -244,11 +244,11 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		«FOR succ : successions»
 			«IF justActionTargets(succ) && leadsToEndAction(ad, succ, new ArrayList<Usage>())»
 				«"	"»«actionDefName(succ.source.get(0) as ActionUsage)»(a);
-				«"	"»1 =!= find nextAction(a, _a);
+				«"	"»1 =!= count find nextAction(a, _a);
 				«lineEnd(successions, succ, onlyBlock, false)»
 			«ELSEIF hasTargetEndAction(succ)»
 				«"	"»«actionDefName(succ.source.get(0) as ActionUsage)»(a);
-				«"	"»0 =!= find nextAction(a, _a);
+				«"	"»0 =!= count find nextAction(a, _a);
 				«lineEnd(successions, succ, onlyBlock, false)»
 			«ENDIF»
 		«ENDFOR»
@@ -259,12 +259,12 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		val endTargetMap = justEndTargetMap(transitions)»«
 		FOR entry : actionTargetMap.entrySet»
 			«"	"»«actionDefName(entry.getKey)»(a);
-			«"	"»1 =!= find nextAction(a, _a);
+			«"	"»1 =!= count find nextAction(a, _a);
 			«lineEnd(actionTargetMap, entry.getKey, endTargetMap.isEmpty)»
 		«ENDFOR»
 		«FOR entry : endTargetMap.entrySet»
 			«"	"»«actionDefName(entry.getKey)»(a);
-			«"	"»0 =!= find nextAction(a, _a);
+			«"	"»0 =!= count find nextAction(a, _a);
 			«lineEnd(endTargetMap, entry.getKey, true)»
 		«ENDFOR»
 		
