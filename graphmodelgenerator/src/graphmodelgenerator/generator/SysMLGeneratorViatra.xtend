@@ -74,14 +74,14 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		import viatra "queries.Validation"
 		
 		generate {
-		  metamodel = {package action}
-		  constraints = {package queries}
-		  solver = ViatraSolver
-		  scope = {#node = 0..«numOfNodes(model.member.filter(ActionDefinition))»}
-		  config = {log-level = normal, "scopePropagator" = "typeHierarchy"}
-		  number = 1
-		  //should be replaced by actual project name!
-		  output = "platform:/resource/<<project_name>>/output"
+			metamodel = {package action}
+		 	constraints = {package queries}
+		 	solver = ViatraSolver
+		 	scope = {#node = 0..«numOfNodes(model.member.filter(ActionDefinition))»}
+			config = {log-level = normal, "scopePropagator" = "typeHierarchy"}
+			number = 1
+			//should be replaced by actual project name!
+			output = "platform:/resource/<<project_name>>/output"
 		}
 	'''
 	
@@ -211,7 +211,7 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		«invalidActionSeq(startActionDefName(ad))»
 		
 		@Constraint
-		pattern multiplePrev(a: Action) :-
+		pattern multiplePrev(a: Action) {
 			Action.next(a, a1);
 			Action.next(a, a2);
 			a1 != a2;
@@ -269,7 +269,7 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		«ENDFOR»
 		
 		pattern nextAction(first: Action, second: Action) {
-		  Action.next(first, second);
+			Action.next(first, second);
 		}	
 	'''
 	
