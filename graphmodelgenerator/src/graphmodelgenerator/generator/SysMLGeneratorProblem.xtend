@@ -183,14 +183,12 @@ class SysMLGeneratorProblem extends AbstractGenerator {
 					&& justEndTargetMap(ad.member.filter(TransitionUsage)).isEmpty)»
 				«invalidNumOfNext(ad, ad.member.filter(TransitionUsage))»
 			
+			pred hasNext(Action a) :-
+				next(a, _a).
+			
 		«ENDIF»		
 		error invalidActionSeq(Action a1, Action a2) :-
 		«invalidActionSeq(startActionDefName(ad))»
-		
-		error multiplePrev(Action a) :-
-			next(a, a1),
-			next(a, a2),
-			!equals(a1, a2).
 	'''
 	
 	def String invalidSuccession(Iterable<SuccessionAsUsage> successions, boolean onlyBlock) '''
@@ -217,10 +215,10 @@ class SysMLGeneratorProblem extends AbstractGenerator {
 		«FOR succ : successions»
 			«IF justActionTargets(succ) && leadsToEndAction(ad, succ, new ArrayList<Usage>())»
 				«actionDefName(succ.source.get(0) as ActionUsage)»(a),
-				1 =!= count { next(a, _a) }«lineEnd(successions, succ, onlyBlock, false)»
+				!hasNext(a)«lineEnd(successions, succ, onlyBlock, false)»
 			«ELSEIF hasTargetEndAction(succ)»
 				«actionDefName(succ.source.get(0) as ActionUsage)»(a),
-				0 =!= count { next(a, _a) }«lineEnd(successions, succ, onlyBlock, false)»
+				hasNext(a)«lineEnd(successions, succ, onlyBlock, false)»
 			«ENDIF»
 		«ENDFOR»
 	'''
@@ -230,11 +228,11 @@ class SysMLGeneratorProblem extends AbstractGenerator {
 		val endTargetMap = justEndTargetMap(transitions)»«
 		FOR entry : actionTargetMap.entrySet»
 			«actionDefName(entry.getKey)»(a),
-			1 =!= count { next(a, _a) }«lineEnd(actionTargetMap, entry.getKey, endTargetMap.isEmpty)»
+			!hasNext(a)«lineEnd(actionTargetMap, entry.getKey, endTargetMap.isEmpty)»
 		«ENDFOR»
 		«FOR entry : endTargetMap.entrySet»
 			«actionDefName(entry.getKey)»(a),
-			0 =!= count { next(a, _a) }«lineEnd(endTargetMap, entry.getKey, true)»
+			hasNext(a)«lineEnd(endTargetMap, entry.getKey, true)»
 		«ENDFOR»
 	'''
 	
@@ -286,15 +284,15 @@ class SysMLGeneratorProblem extends AbstractGenerator {
 		«"	"»!equals(a1, a2),
 		«"	"»isEntry(a1),
 		«"	"»isEntry(a2);
-		«"	"»!isEntry(a_);
+		«"	"»!isEntry(_a);
 		«"	"»isEntry(a),
 		«"	"»!«entryAction»(a).
 		
 		pred isEntry(Action a) :-
-			0 =:= count { notInTransitiveClosure(a, _a) }.
+			!notInTransitiveClosure(a, _a).
 		
 		pred notInTransitiveClosure(Action a1, Action a2) :-
-			a1 != a2,
+			!equals(a1, a2),
 			!isInTransitiveClosure(a1, a2).
 		
 		pred isInTransitiveClosure(Action a1, Action a2) :-

@@ -546,7 +546,7 @@ public class SysMLGeneratorAlloy extends AbstractGenerator {
     _builder.append("fact lonePrev {");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("all a: Action | (lone a_: Action | a in a_.next)");
+    _builder.append("all a: Action | (lone _a: Action | a in _a.next)");
     _builder.newLine();
     _builder.append("}");
     _builder.newLine();
@@ -609,7 +609,7 @@ public class SysMLGeneratorAlloy extends AbstractGenerator {
             Element _get = succ.getSource().get(0);
             String _actionDefName = this.actionDefName(((ActionUsage) _get));
             _builder.append(_actionDefName);
-            _builder.append(" | (one a_: Action | a_ in a.next)");
+            _builder.append(" | (one _a: Action | _a in a.next)");
             _builder.newLineIfNotEmpty();
           } else {
             boolean _hasTargetEndAction = this.hasTargetEndAction(succ);
@@ -618,7 +618,7 @@ public class SysMLGeneratorAlloy extends AbstractGenerator {
               Element _get_1 = succ.getSource().get(0);
               String _actionDefName_1 = this.actionDefName(((ActionUsage) _get_1));
               _builder.append(_actionDefName_1);
-              _builder.append(" | (no a_: Action | a_ in a.next)");
+              _builder.append(" | (no _a: Action | _a in a.next)");
               _builder.newLineIfNotEmpty();
             }
           }
@@ -634,7 +634,7 @@ public class SysMLGeneratorAlloy extends AbstractGenerator {
         _builder.append("all a: ");
         String _actionDefName_2 = this.actionDefName(entry.getKey());
         _builder.append(_actionDefName_2);
-        _builder.append(" | (one a_: Action | a_ in a.next)");
+        _builder.append(" | (one _a: Action | _a in a.next)");
         _builder.newLineIfNotEmpty();
       }
     }
@@ -644,7 +644,7 @@ public class SysMLGeneratorAlloy extends AbstractGenerator {
         _builder.append("all a: ");
         String _actionDefName_3 = this.actionDefName(entry_1.getKey());
         _builder.append(_actionDefName_3);
-        _builder.append(" | (no a_: Action | a_ in a.next)");
+        _builder.append(" | (no _a: Action | _a in a.next)");
         _builder.newLineIfNotEmpty();
       }
     }
@@ -750,7 +750,7 @@ public class SysMLGeneratorAlloy extends AbstractGenerator {
   
   public CharSequence actionSeq(final String entryAction) {
     StringConcatenation _builder = new StringConcatenation();
-    _builder.append("one a: Action | (all a_: Action | a_ != a <=> a_ in a.^next) and a in ");
+    _builder.append("one a: Action | (all _a: Action | _a != a <=> _a in a.^next) and a in ");
     _builder.append(entryAction);
     _builder.newLineIfNotEmpty();
     return _builder;

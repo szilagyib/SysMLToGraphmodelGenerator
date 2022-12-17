@@ -425,6 +425,12 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
         _builder.append(_invalidNumOfNext_1, "\t");
         _builder.newLineIfNotEmpty();
         _builder.newLine();
+        _builder.append("pred hasNext(Action a) :-");
+        _builder.newLine();
+        _builder.append("\t");
+        _builder.append("next(a, _a).");
+        _builder.newLine();
+        _builder.newLine();
       }
     }
     _builder.append("error invalidActionSeq(Action a1, Action a2) :-");
@@ -432,18 +438,6 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
     String _invalidActionSeq = this.invalidActionSeq(this.startActionDefName(ad));
     _builder.append(_invalidActionSeq);
     _builder.newLineIfNotEmpty();
-    _builder.newLine();
-    _builder.append("error multiplePrev(Action a) :-");
-    _builder.newLine();
-    _builder.append("\t");
-    _builder.append("next(a, a1),");
-    _builder.newLine();
-    _builder.append("\t");
-    _builder.append("next(a, a2),");
-    _builder.newLine();
-    _builder.append("\t");
-    _builder.append("!equals(a1, a2).");
-    _builder.newLine();
     return _builder.toString();
   }
   
@@ -514,7 +508,7 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
             _builder.append(_actionDefName);
             _builder.append("(a),");
             _builder.newLineIfNotEmpty();
-            _builder.append("1 =!= count { next(a, _a) }");
+            _builder.append("!hasNext(a)");
             String _lineEnd = this.lineEnd(successions, succ, onlyBlock, false);
             _builder.append(_lineEnd);
             _builder.newLineIfNotEmpty();
@@ -526,7 +520,7 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
               _builder.append(_actionDefName_1);
               _builder.append("(a),");
               _builder.newLineIfNotEmpty();
-              _builder.append("0 =!= count { next(a, _a) }");
+              _builder.append("hasNext(a)");
               String _lineEnd_1 = this.lineEnd(successions, succ, onlyBlock, false);
               _builder.append(_lineEnd_1);
               _builder.newLineIfNotEmpty();
@@ -550,7 +544,7 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
         _builder.append(_actionDefName);
         _builder.append("(a),");
         _builder.newLineIfNotEmpty();
-        _builder.append("1 =!= count { next(a, _a) }");
+        _builder.append("!hasNext(a)");
         String _lineEnd = this.lineEnd(actionTargetMap, entry.getKey(), endTargetMap.isEmpty());
         _builder.append(_lineEnd);
         _builder.newLineIfNotEmpty();
@@ -563,7 +557,7 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
         _builder.append(_actionDefName_1);
         _builder.append("(a),");
         _builder.newLineIfNotEmpty();
-        _builder.append("0 =!= count { next(a, _a) }");
+        _builder.append("hasNext(a)");
         String _lineEnd_1 = this.lineEnd(endTargetMap, entry_1.getKey(), true);
         _builder.append(_lineEnd_1);
         _builder.newLineIfNotEmpty();
@@ -681,7 +675,7 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
     _builder.append("isEntry(a2);");
     _builder.newLineIfNotEmpty();
     _builder.append("\t");
-    _builder.append("!isEntry(a_);");
+    _builder.append("!isEntry(_a);");
     _builder.newLineIfNotEmpty();
     _builder.append("\t");
     _builder.append("isEntry(a),");
@@ -695,13 +689,13 @@ public class SysMLGeneratorProblem extends AbstractGenerator {
     _builder.append("pred isEntry(Action a) :-");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("0 =:= count { notInTransitiveClosure(a, _a) }.");
+    _builder.append("!notInTransitiveClosure(a, _a).");
     _builder.newLine();
     _builder.newLine();
     _builder.append("pred notInTransitiveClosure(Action a1, Action a2) :-");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("a1 != a2,");
+    _builder.append("!equals(a1, a2),");
     _builder.newLine();
     _builder.append("\t");
     _builder.append("!isInTransitiveClosure(a1, a2).");

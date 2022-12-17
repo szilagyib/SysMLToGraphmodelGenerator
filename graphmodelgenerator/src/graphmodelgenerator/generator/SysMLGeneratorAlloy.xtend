@@ -234,7 +234,7 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 		}
 		
 		fact lonePrev {
-			all a: Action | (lone a_: Action | a in a_.next)
+			all a: Action | (lone _a: Action | a in _a.next)
 		}
 	'''
 	
@@ -255,18 +255,18 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 	def String numOfNext(ActionDefinition ad, Iterable<SuccessionAsUsage> successions, Iterable<TransitionUsage> transitions) '''
 		«FOR succ : successions»
 			«IF justActionTargets(succ) && leadsToEndAction(ad, succ, new ArrayList<Usage>())»
-				all a: «actionDefName(succ.source.get(0) as ActionUsage)» | (one a_: Action | a_ in a.next)
+				all a: «actionDefName(succ.source.get(0) as ActionUsage)» | (one _a: Action | _a in a.next)
 			«ELSEIF hasTargetEndAction(succ)»
-				all a: «actionDefName(succ.source.get(0) as ActionUsage)» | (no a_: Action | a_ in a.next)
+				all a: «actionDefName(succ.source.get(0) as ActionUsage)» | (no _a: Action | _a in a.next)
 			«ENDIF»
 		«ENDFOR»
 		«val actionTargetMap = oneTargetActionMap(ad, transitions)»«
 		val endTargetMap = justEndTargetMap(transitions)»«
 		FOR entry : actionTargetMap.entrySet»
-			all a: «actionDefName(entry.getKey)» | (one a_: Action | a_ in a.next)
+			all a: «actionDefName(entry.getKey)» | (one _a: Action | _a in a.next)
 		«ENDFOR»
 		«FOR entry : endTargetMap.entrySet»
-			all a: «actionDefName(entry.getKey)» | (no a_: Action | a_ in a.next)
+			all a: «actionDefName(entry.getKey)» | (no _a: Action | _a in a.next)
 		«ENDFOR»
 	'''
 	
@@ -315,7 +315,7 @@ class SysMLGeneratorAlloy extends AbstractGenerator {
 	}
 	
 	def actionSeq(String entryAction) '''
-		one a: Action | (all a_: Action | a_ != a <=> a_ in a.^next) and a in «entryAction»
+		one a: Action | (all _a: Action | _a != a <=> _a in a.^next) and a in «entryAction»
 	'''
 	
 	def Map<ActionUsage, List<String>> transitionMap(Iterable<TransitionUsage> transitions, boolean isEnd) {

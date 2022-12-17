@@ -37,7 +37,7 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		val name = resource.URI.trimFileExtension().lastSegment()
 		fsa.generateFile(name + ".xcore", IFileSystemAccess2.DEFAULT_OUTPUT, generateXcore(model))
 		fsa.generateFile(name + ".vql", IFileSystemAccess2.DEFAULT_OUTPUT, generateVql(model))
-		fsa.generateFile(name + ".vsconfig", IFileSystemAccess2.DEFAULT_OUTPUT, generateVsconfig(model))
+		fsa.generateFile(name + ".vsconfig", IFileSystemAccess2.DEFAULT_OUTPUT, generateVsconfig(model, name))
 	}
 	
 	def String generateXcore(Namespace model) '''
@@ -69,9 +69,11 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		«ENDFOR»	
 	'''
 
-	def String generateVsconfig(Namespace model) '''
-		import epackage "action"
-		import viatra "queries.Validation"
+	def String generateVsconfig(Namespace model, String name) '''
+		//<<project_name>> should be replaced by actual project name!
+		
+		import epackage "platform:/resource/<<project_name>>/model/«name».ecore"
+		import viatra "platform:/resource/<<project_name>>/src/queries/«name».vql"
 		
 		generate {
 			metamodel = {package action}
@@ -80,7 +82,6 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		 	scope = {#node = 0..«numOfNodes(model.member.filter(ActionDefinition))»}
 			config = {log-level = normal, "scopePropagator" = "typeHierarchy"}
 			number = 1
-			//should be replaced by actual project name!
 			output = "platform:/resource/<<project_name>>/output"
 		}
 	'''
@@ -193,6 +194,9 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 	def String actionConstraints(ActionDefinition ad) '''
 		package queries
 		
+		//<<metamodel_nsuri>> should be replaced by actual Ns URI!
+		import epackage "<<metamodel_nsuri>>"
+		
 		@Constraint
 		pattern invalidSuccession(first: Action, second: Action) {
 		«invalidSuccession(ad.member.filter(SuccessionAsUsage), ad.member.filter(TransitionUsage).isEmpty)»
@@ -205,24 +209,22 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 				&& justEndTargetMap(ad.member.filter(TransitionUsage)).isEmpty)»
 			«invalidNumOfNext(ad, ad.member.filter(TransitionUsage))»
 			
+			pattern hasNext(a: Action) {
+				Action.next(a, _a);
+			}
+			
 		«ENDIF»
 		@Constraint
 		pattern invalidActionSeq(a1: Action, a2: Action) {
-		«invalidActionSeq(startActionDefName(ad))»
-		
-		@Constraint
-		pattern multiplePrev(a: Action) {
-			Action.next(a, a1);
-			Action.next(a, a2);
-			a1 != a2;
-		}
+		«invalidActionSeq(startActionDefName(ad))»		
+		«isActionType(ad)»
 	'''
 	
 	def String invalidSuccession(Iterable<SuccessionAsUsage> successions, boolean onlyBlock) '''
 		«FOR succ : successions»
 			«IF justActionTargets(succ)»
 				«"	"»«actionDefName(succ.source.get(0) as ActionUsage)»(first);
-				«"	"»neg «actionDefName(succ.target.get(0) as ActionUsage)»(second);
+				«"	"»neg find is«actionDefName(succ.target.get(0) as ActionUsage)»(second);
 				«"	"»Action.next(first, second);
 				«lineEnd(successions, succ, onlyBlock, true)»
 			«ENDIF»
@@ -233,7 +235,7 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		«FOR entry : transitionMap(transitions, false).entrySet»
 			«"	"»«actionDefName(entry.getKey)»(first);
 			«FOR targetName : entry.getValue»
-				«"	"»neg «targetName»(second);
+				«"	"»neg find is«targetName»(second);
 			«ENDFOR»
 			«"	"»Action.next(first, second);
 			«lineEnd(transitionMap(transitions, false), entry.getKey, true)»
@@ -244,11 +246,11 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		«FOR succ : successions»
 			«IF justActionTargets(succ) && leadsToEndAction(ad, succ, new ArrayList<Usage>())»
 				«"	"»«actionDefName(succ.source.get(0) as ActionUsage)»(a);
-				«"	"»1 =!= count find nextAction(a, _a);
+				«"	"»neg find hasNext(a);
 				«lineEnd(successions, succ, onlyBlock, false)»
 			«ELSEIF hasTargetEndAction(succ)»
 				«"	"»«actionDefName(succ.source.get(0) as ActionUsage)»(a);
-				«"	"»0 =!= count find nextAction(a, _a);
+				«"	"»find hasNext(a);
 				«lineEnd(successions, succ, onlyBlock, false)»
 			«ENDIF»
 		«ENDFOR»
@@ -259,18 +261,14 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		val endTargetMap = justEndTargetMap(transitions)»«
 		FOR entry : actionTargetMap.entrySet»
 			«"	"»«actionDefName(entry.getKey)»(a);
-			«"	"»1 =!= count find nextAction(a, _a);
+			«"	"»neg find hasNext(a);
 			«lineEnd(actionTargetMap, entry.getKey, endTargetMap.isEmpty)»
 		«ENDFOR»
 		«FOR entry : endTargetMap.entrySet»
 			«"	"»«actionDefName(entry.getKey)»(a);
-			«"	"»0 =!= count find nextAction(a, _a);
+			«"	"»find hasNext(a);
 			«lineEnd(endTargetMap, entry.getKey, true)»
 		«ENDFOR»
-		
-		pattern nextAction(first: Action, second: Action) {
-			Action.next(first, second);
-		}	
 	'''
 	
 	def String actionDefName(ActionUsage au) '''«
@@ -333,7 +331,7 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		} or {
 		«"	"»neg find isEntry(_a);
 		} or {		
-		«"	"»neg «entryAction»(a);
+		«"	"»neg find is«entryAction»(a);
 		«"	"»find isEntry(a);
 		}
 		
@@ -347,8 +345,25 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		}
 		
 		pattern isInTransitiveClosure(a1: Action, a2: Action) {
-			Action.next+(a1, a2);
+			find isNext+(a1, a2);
 		}
+		
+		pattern isNext(a1: Action, a2: Action) {
+			Action.next(a1, a2);
+		}
+	'''
+	
+	def String isActionType(ActionDefinition ad) '''
+		«IF !ad.ownedAction.isEmpty»
+			«FOR au : ad.ownedAction»
+				«IF !(au instanceof TransitionUsage)»
+				
+				pattern is«actionDefName(au)»(a: Action) {
+					«actionDefName(au)»(a);
+				}
+				«ENDIF»				
+			«ENDFOR»
+		«ENDIF»	
 	'''
 	
 	def Map<ActionUsage, List<String>> transitionMap(Iterable<TransitionUsage> transitions, boolean isEnd) {

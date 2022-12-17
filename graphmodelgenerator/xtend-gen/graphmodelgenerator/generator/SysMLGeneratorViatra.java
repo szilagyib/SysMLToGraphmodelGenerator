@@ -53,7 +53,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     final String name = resource.getURI().trimFileExtension().lastSegment();
     fsa.generateFile((name + ".xcore"), IFileSystemAccess2.DEFAULT_OUTPUT, this.generateXcore(model));
     fsa.generateFile((name + ".vql"), IFileSystemAccess2.DEFAULT_OUTPUT, this.generateVql(model));
-    fsa.generateFile((name + ".vsconfig"), IFileSystemAccess2.DEFAULT_OUTPUT, this.generateVsconfig(model));
+    fsa.generateFile((name + ".vsconfig"), IFileSystemAccess2.DEFAULT_OUTPUT, this.generateVsconfig(model, name));
   }
   
   public String generateXcore(final Namespace model) {
@@ -121,12 +121,19 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     return _builder.toString();
   }
   
-  public String generateVsconfig(final Namespace model) {
+  public String generateVsconfig(final Namespace model, final String name) {
     StringConcatenation _builder = new StringConcatenation();
-    _builder.append("import epackage \"action\"");
+    _builder.append("//<<project_name>> should be replaced by actual project name!");
     _builder.newLine();
-    _builder.append("import viatra \"queries.Validation\"");
     _builder.newLine();
+    _builder.append("import epackage \"platform:/resource/<<project_name>>/model/");
+    _builder.append(name);
+    _builder.append(".ecore\"");
+    _builder.newLineIfNotEmpty();
+    _builder.append("import viatra \"platform:/resource/<<project_name>>/src/queries/");
+    _builder.append(name);
+    _builder.append(".vql\"");
+    _builder.newLineIfNotEmpty();
     _builder.newLine();
     _builder.append("generate {");
     _builder.newLine();
@@ -150,9 +157,6 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     _builder.newLine();
     _builder.append("\t");
     _builder.append("number = 1");
-    _builder.newLine();
-    _builder.append("\t");
-    _builder.append("//should be replaced by actual project name!");
     _builder.newLine();
     _builder.append("\t");
     _builder.append("output = \"platform:/resource/<<project_name>>/output\"");
@@ -435,6 +439,11 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     _builder.append("package queries");
     _builder.newLine();
     _builder.newLine();
+    _builder.append("//<<metamodel_nsuri>> should be replaced by actual Ns URI!");
+    _builder.newLine();
+    _builder.append("import epackage \"<<metamodel_nsuri>>\"");
+    _builder.newLine();
+    _builder.newLine();
     _builder.append("@Constraint");
     _builder.newLine();
     _builder.append("pattern invalidSuccession(first: Action, second: Action) {");
@@ -461,6 +470,14 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
         _builder.append(_invalidNumOfNext_1);
         _builder.newLineIfNotEmpty();
         _builder.newLine();
+        _builder.append("pattern hasNext(a: Action) {");
+        _builder.newLine();
+        _builder.append("\t");
+        _builder.append("Action.next(a, _a);");
+        _builder.newLine();
+        _builder.append("}");
+        _builder.newLine();
+        _builder.newLine();
       }
     }
     _builder.append("@Constraint");
@@ -469,23 +486,11 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     _builder.newLine();
     String _invalidActionSeq = this.invalidActionSeq(this.startActionDefName(ad));
     _builder.append(_invalidActionSeq);
+    _builder.append("\t\t");
     _builder.newLineIfNotEmpty();
-    _builder.newLine();
-    _builder.append("@Constraint");
-    _builder.newLine();
-    _builder.append("pattern multiplePrev(a: Action) {");
-    _builder.newLine();
-    _builder.append("\t");
-    _builder.append("Action.next(a, a1);");
-    _builder.newLine();
-    _builder.append("\t");
-    _builder.append("Action.next(a, a2);");
-    _builder.newLine();
-    _builder.append("\t");
-    _builder.append("a1 != a2;");
-    _builder.newLine();
-    _builder.append("}");
-    _builder.newLine();
+    String _isActionType = this.isActionType(ad);
+    _builder.append(_isActionType);
+    _builder.newLineIfNotEmpty();
     return _builder.toString();
   }
   
@@ -503,7 +508,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
             _builder.append("(first);");
             _builder.newLineIfNotEmpty();
             _builder.append("\t");
-            _builder.append("neg ");
+            _builder.append("neg find is");
             Element _get_1 = succ.getTarget().get(0);
             String _actionDefName_1 = this.actionDefName(((ActionUsage) _get_1));
             _builder.append(_actionDefName_1);
@@ -536,7 +541,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
           List<String> _value = entry.getValue();
           for(final String targetName : _value) {
             _builder.append("\t");
-            _builder.append("neg ");
+            _builder.append("neg find is");
             _builder.append(targetName);
             _builder.append("(second);");
             _builder.newLineIfNotEmpty();
@@ -566,7 +571,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
             _builder.append("(a);");
             _builder.newLineIfNotEmpty();
             _builder.append("\t");
-            _builder.append("1 =!= count find nextAction(a, _a);");
+            _builder.append("neg find hasNext(a);");
             _builder.newLineIfNotEmpty();
             String _lineEnd = this.lineEnd(successions, succ, onlyBlock, false);
             _builder.append(_lineEnd);
@@ -581,7 +586,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
               _builder.append("(a);");
               _builder.newLineIfNotEmpty();
               _builder.append("\t");
-              _builder.append("0 =!= count find nextAction(a, _a);");
+              _builder.append("find hasNext(a);");
               _builder.newLineIfNotEmpty();
               String _lineEnd_1 = this.lineEnd(successions, succ, onlyBlock, false);
               _builder.append(_lineEnd_1);
@@ -608,7 +613,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
         _builder.append("(a);");
         _builder.newLineIfNotEmpty();
         _builder.append("\t");
-        _builder.append("1 =!= count find nextAction(a, _a);");
+        _builder.append("neg find hasNext(a);");
         _builder.newLineIfNotEmpty();
         String _lineEnd = this.lineEnd(actionTargetMap, entry.getKey(), endTargetMap.isEmpty());
         _builder.append(_lineEnd);
@@ -624,21 +629,13 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
         _builder.append("(a);");
         _builder.newLineIfNotEmpty();
         _builder.append("\t");
-        _builder.append("0 =!= count find nextAction(a, _a);");
+        _builder.append("find hasNext(a);");
         _builder.newLineIfNotEmpty();
         String _lineEnd_1 = this.lineEnd(endTargetMap, entry_1.getKey(), true);
         _builder.append(_lineEnd_1);
         _builder.newLineIfNotEmpty();
       }
     }
-    _builder.newLine();
-    _builder.append("pattern nextAction(first: Action, second: Action) {");
-    _builder.newLine();
-    _builder.append("\t");
-    _builder.append("Action.next(first, second);");
-    _builder.newLine();
-    _builder.append("}\t");
-    _builder.newLine();
     return _builder.toString();
   }
   
@@ -764,7 +761,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     _builder.append("} or {\t\t");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("neg ");
+    _builder.append("neg find is");
     _builder.append(entryAction);
     _builder.append("(a);");
     _builder.newLineIfNotEmpty();
@@ -796,10 +793,51 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     _builder.append("pattern isInTransitiveClosure(a1: Action, a2: Action) {");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("Action.next+(a1, a2);");
+    _builder.append("find isNext+(a1, a2);");
     _builder.newLine();
     _builder.append("}");
     _builder.newLine();
+    _builder.newLine();
+    _builder.append("pattern isNext(a1: Action, a2: Action) {");
+    _builder.newLine();
+    _builder.append("\t");
+    _builder.append("Action.next(a1, a2);");
+    _builder.newLine();
+    _builder.append("}");
+    _builder.newLine();
+    return _builder.toString();
+  }
+  
+  public String isActionType(final ActionDefinition ad) {
+    StringConcatenation _builder = new StringConcatenation();
+    {
+      boolean _isEmpty = ad.getOwnedAction().isEmpty();
+      boolean _not = (!_isEmpty);
+      if (_not) {
+        {
+          EList<ActionUsage> _ownedAction = ad.getOwnedAction();
+          for(final ActionUsage au : _ownedAction) {
+            {
+              if ((!(au instanceof TransitionUsage))) {
+                _builder.newLine();
+                _builder.append("pattern is");
+                String _actionDefName = this.actionDefName(au);
+                _builder.append(_actionDefName);
+                _builder.append("(a: Action) {");
+                _builder.newLineIfNotEmpty();
+                _builder.append("\t");
+                String _actionDefName_1 = this.actionDefName(au);
+                _builder.append(_actionDefName_1, "\t");
+                _builder.append("(a);");
+                _builder.newLineIfNotEmpty();
+                _builder.append("}");
+                _builder.newLine();
+              }
+            }
+          }
+        }
+      }
+    }
     return _builder.toString();
   }
   
