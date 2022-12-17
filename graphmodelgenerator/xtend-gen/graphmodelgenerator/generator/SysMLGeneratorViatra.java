@@ -53,7 +53,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     final String name = resource.getURI().trimFileExtension().lastSegment();
     fsa.generateFile((name + ".xcore"), IFileSystemAccess2.DEFAULT_OUTPUT, this.generateXcore(model));
     fsa.generateFile((name + ".vql"), IFileSystemAccess2.DEFAULT_OUTPUT, this.generateVql(model));
-    fsa.generateFile((name + ".vsconfig"), IFileSystemAccess2.DEFAULT_OUTPUT, this.generateVsconfig(model, name));
+    fsa.generateFile((name + ".vsconfig"), IFileSystemAccess2.DEFAULT_OUTPUT, this.generateVsconfig(model));
   }
   
   public String generateXcore(final Namespace model) {
@@ -121,19 +121,12 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     return _builder.toString();
   }
   
-  public String generateVsconfig(final Namespace model, final String name) {
+  public String generateVsconfig(final Namespace model) {
     StringConcatenation _builder = new StringConcatenation();
-    _builder.append("//<<project_name>> should be replaced by actual project name!");
+    _builder.append("import epackage \"<<metamodel_path>>\"\"");
     _builder.newLine();
+    _builder.append("import viatra \"<<vql_path>>\"");
     _builder.newLine();
-    _builder.append("import epackage \"platform:/resource/<<project_name>>/model/");
-    _builder.append(name);
-    _builder.append(".ecore\"");
-    _builder.newLineIfNotEmpty();
-    _builder.append("import viatra \"platform:/resource/<<project_name>>/src/queries/");
-    _builder.append(name);
-    _builder.append(".vql\"");
-    _builder.newLineIfNotEmpty();
     _builder.newLine();
     _builder.append("generate {");
     _builder.newLine();
@@ -159,7 +152,7 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     _builder.append("number = 1");
     _builder.newLine();
     _builder.append("\t");
-    _builder.append("output = \"platform:/resource/<<project_name>>/output\"");
+    _builder.append("output = \"<<out_path>>\"");
     _builder.newLine();
     _builder.append("}");
     _builder.newLine();
@@ -438,8 +431,6 @@ public class SysMLGeneratorViatra extends AbstractGenerator {
     StringConcatenation _builder = new StringConcatenation();
     _builder.append("package queries");
     _builder.newLine();
-    _builder.newLine();
-    _builder.append("//<<metamodel_nsuri>> should be replaced by actual Ns URI!");
     _builder.newLine();
     _builder.append("import epackage \"<<metamodel_nsuri>>\"");
     _builder.newLine();

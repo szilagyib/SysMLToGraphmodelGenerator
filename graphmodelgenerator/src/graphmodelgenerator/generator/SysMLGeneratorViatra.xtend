@@ -37,7 +37,7 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		val name = resource.URI.trimFileExtension().lastSegment()
 		fsa.generateFile(name + ".xcore", IFileSystemAccess2.DEFAULT_OUTPUT, generateXcore(model))
 		fsa.generateFile(name + ".vql", IFileSystemAccess2.DEFAULT_OUTPUT, generateVql(model))
-		fsa.generateFile(name + ".vsconfig", IFileSystemAccess2.DEFAULT_OUTPUT, generateVsconfig(model, name))
+		fsa.generateFile(name + ".vsconfig", IFileSystemAccess2.DEFAULT_OUTPUT, generateVsconfig(model))
 	}
 	
 	def String generateXcore(Namespace model) '''
@@ -69,11 +69,9 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		«ENDFOR»	
 	'''
 
-	def String generateVsconfig(Namespace model, String name) '''
-		//<<project_name>> should be replaced by actual project name!
-		
-		import epackage "platform:/resource/<<project_name>>/model/«name».ecore"
-		import viatra "platform:/resource/<<project_name>>/src/queries/«name».vql"
+	def String generateVsconfig(Namespace model) '''
+		import epackage "<<metamodel_path>>""
+		import viatra "<<vql_path>>"
 		
 		generate {
 			metamodel = {package action}
@@ -82,7 +80,7 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 		 	scope = {#node = 0..«numOfNodes(model.member.filter(ActionDefinition))»}
 			config = {log-level = normal, "scopePropagator" = "typeHierarchy"}
 			number = 1
-			output = "platform:/resource/<<project_name>>/output"
+			output = "<<out_path>>"
 		}
 	'''
 	
@@ -194,7 +192,6 @@ class SysMLGeneratorViatra extends AbstractGenerator {
 	def String actionConstraints(ActionDefinition ad) '''
 		package queries
 		
-		//<<metamodel_nsuri>> should be replaced by actual Ns URI!
 		import epackage "<<metamodel_nsuri>>"
 		
 		@Constraint
